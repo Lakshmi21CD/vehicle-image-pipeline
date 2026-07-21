@@ -12,12 +12,15 @@ const IORedis = require("ioredis");
 // has no password by default). BullMQ expects a connection-options object
 // or an ioredis client instance -- not a raw string -- so when REDIS_URL is
 // set we construct an actual IORedis client from it.
-const connection = process.env.REDIS_URL
-  ? new IORedis(process.env.REDIS_URL, { maxRetriesPerRequest: null })
-  : {
-      host: process.env.REDIS_HOST || "localhost",
-      port: Number(process.env.REDIS_PORT) || 6379,
-    };
+const connection = new IORedis(
+  process.env.REDIS_URL || {
+    host: process.env.REDIS_HOST || "localhost",
+    port: Number(process.env.REDIS_PORT) || 6379,
+  },
+  {
+    maxRetriesPerRequest: null,
+  }
+);
 
 const QUEUE_NAME = "image-analysis";
 
