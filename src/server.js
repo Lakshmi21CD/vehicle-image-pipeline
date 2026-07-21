@@ -18,8 +18,9 @@ app.get("/health", (req, res) => res.json({ status: "ok", timestamp: new Date().
 
 app.use("/api/images", imagesRouter);
 
-app.use((req, res) => res.status(404).json({ error: "Not found." }));
-app.use(errorHandler);
+app.get("/", (req, res) => {
+  res.send("Vehicle Image Pipeline API is running successfully!");
+});
 
 // The worker runs in the same process as the API for simplicity in this
 // take-home (see README trade-offs section). In production this would be a
