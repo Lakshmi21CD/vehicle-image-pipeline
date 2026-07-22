@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
+const path = require("path");
 
 const imagesRouter = require("./routes/images");
 const { errorHandler } = require("./middleware/errorHandler");
@@ -14,27 +15,40 @@ app.use(cors());
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(express.json());
 
-app.get("/health", (req, res) => res.json({ status: "ok", timestamp: new Date().toISOString() }));
+// Serve static frontend files
+app.use(express.static(path.join(__dirname, "../public")));
 
+app.get("/health", (req, res) =>
+  res.json({
+    status: "ok",
+    timestamp: new Date().toISOString(),
+  })
+);
+
+// API Routes
 app.use("/api/images", imagesRouter);
 
+// Serve frontend homepage
 app.get("/", (req, res) => {
-  res.send("Vehicle Image Pipeline API is running successfully!");
+  res.sendFile(path.join(__dirname, "../public/index.html"));
 });
 
-// The worker runs in the same process as the API for simplicity in this
-// take-home (see README trade-offs section). In production this would be a
-// separate deployable so a burst of image-processing load can't degrade API
-// responsiveness, and worker replicas could scale independently of API replicas.
+// Error handler
+app.use(errorHandler);
+
+// Start worker
 const worker = createWorker();
 
 const server = app.listen(PORT, () => {
   console.log(`API listening on port ${PORT}`);
-  console.log(`Worker running in-process (concurrency: ${process.env.WORKER_CONCURRENCY || 2})`);
+  console.log(
+    `Worker running in-process (concurrency: ${
+      process.env.WORKER_CONCURRENCY || 2
+    })`
+  );
 });
 
-// Graceful shutdown: let in-flight jobs finish before exiting so we don't
-// leave images stuck in "processing" forever.
+// Graceful shutdown
 async function shutdown(signal) {
   console.log(`\n[server] received ${signal}, shutting down gracefully...`);
   server.close();
