@@ -309,3 +309,15 @@ curl http://localhost:3000/api/images/3f2e.../failure
 - A single-process worker is acceptable for this assignment's scope, with the
   production split explicitly called out as a trade-off rather than built.
 - No auth is required for this assignment (evaluator will run locally).
+
+
+# Output Screenshots
+
+## Home Page
+![Home](output/Home.png)
+
+## Uploading and Processing
+![Uploading and Processing](output/uploading%20and%20processing.png)
+
+## Result
+![Result](output/result.png)
