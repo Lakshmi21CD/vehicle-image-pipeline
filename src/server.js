@@ -11,21 +11,25 @@ const { createWorker } = require("./queue/worker");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Middleware
 app.use(cors());
-app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
+app.use(
+  morgan(process.env.NODE_ENV === "production" ? "combined" : "dev")
+);
 app.use(express.json());
 
 // Serve static frontend files
 app.use(express.static(path.join(__dirname, "../public")));
 
-app.get("/health", (req, res) =>
+// Health check
+app.get("/health", (req, res) => {
   res.json({
     status: "ok",
     timestamp: new Date().toISOString(),
-  })
-);
+  });
+});
 
-// API Routes
+// API routes
 app.use("/api/images", imagesRouter);
 
 // Serve frontend homepage
@@ -36,9 +40,10 @@ app.get("/", (req, res) => {
 // Error handler
 app.use(errorHandler);
 
-// Start worker
+// Start background worker
 const worker = createWorker();
 
+// Start server
 const server = app.listen(PORT, () => {
   console.log(`API listening on port ${PORT}`);
   console.log(
@@ -51,8 +56,11 @@ const server = app.listen(PORT, () => {
 // Graceful shutdown
 async function shutdown(signal) {
   console.log(`\n[server] received ${signal}, shutting down gracefully...`);
+
   server.close();
+
   await worker.close();
+
   process.exit(0);
 }
 
