@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vehicle Image Inspection</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --charcoal: #1b1d21;
+    --charcoal-2: #24272c;
+    --paper: #eae7df;
+    --paper-line: #d6d2c4;
+    --orange: #d9622b;
+    --orange-dim: #a84e23;
+    --pass: #3a7d54;
+    --fail: #c1432e;
+    --muted: #8a8d93;
+    --ink: #232323;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    background: var(--charcoal);
+    color: var(--paper);
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  ::selection { background: var(--orange); color: var(--charcoal); }
+
+  .topband {
+    background: repeating-linear-gradient(
+      45deg, var(--orange), var(--orange) 12px, var(--charcoal) 12px, var(--charcoal) 24px
+    );
+    height: 6px;
+  }
+
+  header {
+    padding: 36px 32px 24px;
+    border-bottom: 1px solid #34373d;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: var(--orange);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  header h1 {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 32px;
+    letter-spacing: 0.01em;
+    margin: 0;
+    color: var(--paper);
+  }
+  header p {
+    margin: 8px 0 0;
+    color: var(--muted);
+    font-size: 14px;
+    max-width: 520px;
+  }
+
+  main {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 36px 24px 80px;
+  }
+
+  .card {
+    background: var(--charcoal-2);
+    border: 1px solid #34373d;
+    border-radius: 4px;
+    margin-bottom: 28px;
+    overflow: hidden;
+  }
+  .card-label {
+    font-family: 'Oswald', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 16px 20px 0;
+  }
+  .card-body { padding: 16px 20px 20px; }
+
+  .dropzone {
+    border: 2px dashed #454850;
+    border-radius: 3px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .dropzone:hover, .dropzone.drag {
+    border-color: var(--orange);
+    background: rgba(217, 98, 43, 0.06);
+  }
+  .dropzone input { display: none; }
+  .dropzone .main-txt { font-size: 15px; color: var(--paper); }
+  .dropzone .hint {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 8px;
+  }
+
+  button {
+    background: var(--orange);
+    color: var(--charcoal);
+    border: none;
+    border-radius: 3px;
+    padding: 12px 22px;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-top: 16px;
+    width: 100%;
+    transition: background 0.15s;
+  }
+  button:hover:not(:disabled) { background: var(--orange-dim); }
+  button:disabled { background: #454850; color: var(--muted); cursor: not-allowed; }
+
+  .status-line {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+  }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+  }
+  .dot.pending { background: #c9a227; }
+  .dot.processing { background: #4d8fd9; animation: pulse 1s infinite; }
+  .dot.completed { background: var(--pass); }
+  .dot.failed { background: var(--fail); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+  .id-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    word-break: break-all;
+    margin-bottom: 10px;
+  }
+
+  /* Inspection ticket */
+  .ticket {
+    background: var(--paper);
+    color: var(--ink);
+    border-radius: 3px;
+    position: relative;
+    padding: 22px 22px 26px;
+  }
+  .ticket::before {
+    content: "";
+    position: absolute;
+    top: 0; bottom: 0; left: 0;
+    width: 4px;
+    background: repeating-linear-gradient(
+      to bottom, var(--orange) 0, var(--orange) 6px, transparent 6px, transparent 12px
+    );
+  }
+  .ticket-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 10px;
+    margin-bottom: 14px;
+  }
+  .ticket-head .t1 {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+  .ticket-head .t2 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #5a5a5a;
+  }
+  .stamp {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border: 3px solid;
+    border-radius: 4px;
+    padding: 4px 10px;
+    transform: rotate(-4deg);
+    white-space: nowrap;
+  }
+  .stamp.pass { color: var(--pass); border-color: var(--pass); }
+  .stamp.flag { color: var(--fail); border-color: var(--fail); }
+
+  .check {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 11px 0;
+    border-bottom: 1px dashed var(--paper-line);
+    gap: 12px;
+  }
+  .check:last-child { border-bottom: none; }
+  .check-name { font-size: 14px; font-weight: 500; }
+  .check-details {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #6b6b6b;
+    margin-top: 3px;
+    word-break: break-word;
+  }
+  .badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 3px;
+    flex-shrink: 0;
+    letter-spacing: 0.04em;
+  }
+  .badge.pass { background: rgba(58,125,84,0.12); color: var(--pass); }
+  .badge.fail { background: rgba(193,67,46,0.12); color: var(--fail); }
+
+  .empty { color: var(--muted); font-size: 13px; font-family: 'JetBrains Mono', monospace; }
+</style>
+</head>
+<body>
+
+<div class="topband"></div>
+
+<header>
+  <div class="eyebrow">Field Intake · Async Analysis</div>
+  <h1>Vehicle Image Inspection</h1>
+  <p>Submit a vehicle photo. It's queued and checked for blur, exposure, duplicates, screenshots, and plate format — results return as a structured inspection ticket.</p>
+</header>
+
+<main>
+  <section class="card">
+    <div class="card-label">01 — Submit image</div>
+    <div class="card-body">
+      <div class="dropzone" id="dropzone">
+        <div class="main-txt" id="dzLabel">Click to choose, or drag a file here</div>
+        <div class="hint">JPEG · PNG · WEBP — MAX 10MB</div>
+        <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" />
+      </div>
+      <button id="uploadBtn" disabled>Submit for inspection</button>
+    </div>
+  </section>
+
+  <section class="card" id="statusPanel" style="display:none">
+    <div class="card-label">02 — Processing status</div>
+    <div class="card-body">
+      <div class="id-tag" id="idLine"></div>
+      <div class="status-line">
+        <span class="dot" id="statusDot"></span>
+        <span id="statusText">—</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="resultsPanel" style="display:none">
+    <div class="card-label">03 — Inspection ticket</div>
+    <div class="card-body">
+      <div class="ticket" id="ticket"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+const dropzone = document.getElementById('dropzone');
+const dzLabel = document.getElementById('dzLabel');
+const fileInput = document.getElementById('fileInput');
+const uploadBtn = document.getElementById('uploadBtn');
+const statusPanel = document.getElementById('statusPanel');
+const resultsPanel = document.getElementById('resultsPanel');
+const statusDot = document.getElementById('statusDot');
+const statusText = document.getElementById('statusText');
+const idLine = document.getElementById('idLine');
+const ticket = document.getElementById('ticket');
+
+let selectedFile = null;
+let pollTimer = null;
+
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropzone.classList.remove('drag');
+  if (e.dataTransfer.files.length) {
+    selectedFile = e.dataTransfer.files[0];
+    updateDropzoneLabel();
+  }
+});
+fileInput.addEventListener('change', () => {
+  if (fileInput.files.length) {
+    selectedFile = fileInput.files[0];
+    updateDropzoneLabel();
+  }
+});
+
+function updateDropzoneLabel() {
+  dzLabel.textContent = selectedFile.name;
+  uploadBtn.disabled = false;
+}
+
+uploadBtn.addEventListener('click', async () => {
+  if (!selectedFile) return;
+  uploadBtn.disabled = true;
+  uploadBtn.textContent = 'Submitting…';
+  resultsPanel.style.display = 'none';
+  if (pollTimer) clearInterval(pollTimer);
+
+  const formData = new FormData();
+  formData.append('image', selectedFile);
+
+  try {
+    const res = await fetch('/api/images', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Upload failed');
+
+    statusPanel.style.display = 'block';
+    idLine.textContent = 'REF ' + data.id;
+    setStatus(data.status);
+
+    pollTimer = setInterval(() => pollStatus(data.id), 1500);
+  } catch (err) {
+    setStatus('failed', err.message);
+  } finally {
+    uploadBtn.disabled = false;
+    uploadBtn.textContent = 'Submit for inspection';
+  }
+});
+
+function setStatus(status, note) {
+  statusDot.className = 'dot ' + status;
+  statusText.textContent = note ? `${status} — ${note}` : status;
+}
+
+async function pollStatus(id) {
+  try {
+    const res = await fetch(`/api/images/${id}/status`);
+    const data = await res.json();
+    setStatus(data.status, data.failureReason);
+
+    if (data.status === 'completed') {
+      clearInterval(pollTimer);
+      loadResults(id);
+    } else if (data.status === 'failed') {
+      clearInterval(pollTimer);
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+async function loadResults(id) {
+  const res = await fetch(`/api/images/${id}/results`);
+  const data = await res.json();
+  resultsPanel.style.display = 'block';
+
+  const hasIssues = data.summary?.hasIssues;
+  const stampHtml = `<span class="stamp ${hasIssues ? 'flag' : 'pass'}">${hasIssues ? 'Flagged' : 'Pass'}</span>`;
+
+  const rows = (data.results || []).map(r => `
+    <div class="check">
+      <div>
+        <div class="check-name">${formatCheckName(r.checkName)}</div>
+        <div class="check-details">${escapeHtml(JSON.stringify(r.details))}</div>
+      </div>
+      <span class="badge ${r.passed ? 'pass' : 'fail'}">${r.passed ? 'OK' : 'ISSUE'}</span>
+    </div>
+  `).join('') || '<div class="empty">No results returned.</div>';
+
+  ticket.innerHTML = `
+    <div class="ticket-head">
+      <div>
+        <div class="t1">Inspection ticket</div>
+        <div class="t2">REF ${id}</div>
+      </div>
+      ${stampHtml}
+    </div>
+    ${rows}
+  `;
+}
+
+function formatCheckName(name) {
+  return name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function escapeHtml(str) {
+  return str.replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+</script>
+
+</body>
+</html>
