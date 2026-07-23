@@ -377,7 +377,7 @@ async function loadResults(id) {
     <div class="check">
       <div>
         <div class="check-name">${formatCheckName(r.checkName)}</div>
-        <div class="check-details">${escapeHtml(JSON.stringify(r.details))}</div>
+        <div class="check-details">${escapeHtml(describeCheck(r))}</div>
       </div>
       <span class="badge ${r.passed ? 'pass' : 'fail'}">${r.passed ? 'OK' : 'ISSUE'}</span>
     </div>
@@ -393,6 +393,46 @@ async function loadResults(id) {
     </div>
     ${rows}
   `;
+}
+
+// Turns each check's raw `details` object into a plain-English sentence,
+// rather than dumping JSON at the reader. Falls back to a generic message
+// for any check not explicitly handled (e.g. future checks added later),
+// and specially surfaces a crashed-check error if present.
+function describeCheck(result) {
+  const d = result.details || {};
+
+  if (d.checkCrashed) {
+    return `Check could not run: ${d.error || 'unknown error'}.`;
+  }
+
+  switch (result.checkName) {
+    case 'brightness': {
+      if (d.isLowLight) return `Image is too dark (average brightness ${d.meanBrightness} out of 255).`;
+      if (d.isOverexposed) return `Image is overexposed (average brightness ${d.meanBrightness} out of 255).`;
+      return `Brightness looks normal (average ${d.meanBrightness} out of 255).`;
+    }
+    case 'blur': {
+      return result.passed
+        ? `Image is sharp (edge-sharpness score ${d.laplacianVariance}).`
+        : `Image appears blurry (edge-sharpness score ${d.laplacianVariance}, below the ${d.threshold} sharpness threshold).`;
+    }
+    case 'duplicate': {
+      if (d.isDuplicate) return `Likely a duplicate of a previously uploaded image (match distance ${d.hammingDistance}).`;
+      return 'No matching image found in prior uploads.';
+    }
+    case 'screenshot_detection': {
+      if (!d.isSuspectedScreenshot) return `Looks like a genuine photo (${d.dimensions?.width}×${d.dimensions?.height}, camera metadata ${d.hasCameraExif ? 'present' : 'absent'}).`;
+      return `Looks like a screenshot or re-captured image (no camera metadata${d.isKnownScreenResolution ? ', matches a known screen resolution' : ''}).`;
+    }
+    case 'plate_ocr_validation': {
+      if (d.ocrError) return `Could not read text from the image (OCR error: ${d.ocrError}).`;
+      if (d.isValidFormat) return `Detected plate "${d.extractedPlate}" — matches standard Indian plate format.`;
+      return 'No text matching a valid Indian plate format was found in the image.';
+    }
+    default:
+      return result.passed ? 'No issue detected.' : 'Issue detected.';
+  }
 }
 
 function formatCheckName(name) {
